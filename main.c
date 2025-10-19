@@ -7,6 +7,8 @@
 #define PLAYER_ANIMATION_TEXTURE_PATH "./assets/textures/playerAnimation.png"
 #define ENEMY_TEXTURE_PATH "./assets/textures/enemy.png"
 #define SHOOT_TEXTURE_PATH "./assets/textures/shoot.png"
+#define BACKGROUND0_TEXTURE_PATH "./assets/textures/layer0.png"
+#define BACKGROUND1_TEXTURE_PATH "./assets/textures/layer1.png"
 #define MAX_SHOOTS 20
 #define MAX_ENEMIES 40
 
@@ -59,6 +61,8 @@ static Texture2D playerSprite;
 static Texture2D playerAnimationSprite;
 static Texture2D enemySprite;
 static Texture2D shootSprite;
+static Texture2D background0;
+static Texture2D background1;
 
 static Rectangle enemyFrameRec;
 static int currentEnemyFrame = 0;
@@ -69,6 +73,9 @@ static Rectangle playerAnimationFrameRec;
 static int currentPlayerAnimationFrame = 0;
 static int playerAnimationFramesCounter = 0;
 static int playerAnimationFramesSpeed = 6;
+
+float scrolling0 = 0.0f;
+float scrolling1 = 0.0f;
 
 static void InitGame();
 static void UpdateGame();
@@ -98,6 +105,8 @@ int main(){
     playerAnimationSprite = LoadTexture(PLAYER_ANIMATION_TEXTURE_PATH);
     enemySprite = LoadTexture(ENEMY_TEXTURE_PATH);
     shootSprite = LoadTexture(SHOOT_TEXTURE_PATH);
+    background0 = LoadTexture(BACKGROUND0_TEXTURE_PATH);
+    background1 = LoadTexture(BACKGROUND1_TEXTURE_PATH);
 
     InitGame();
 
@@ -166,6 +175,12 @@ void UpdateGame(){
         if (!pause){
 
             currentTime = GetTime();
+
+            scrolling0 += 20 * GetFrameTime();
+            scrolling1 += 70 * GetFrameTime();
+
+            if (scrolling0 >= background0.height) scrolling0 = 0;
+            if (scrolling1 >= background1.height) scrolling1 = 0;
 
             UpdateInput();
             UpdateShoot();
@@ -321,11 +336,17 @@ void DrawGame(){
     BeginDrawing();
     ClearBackground(BLACK);
 
-    DrawText("HIGHSCORE", SCREEN_WIDTH / 2 - MeasureText("HIGHSCORE", 30) / 2, SCREEN_HEIGHT / 4 - 160, 30, DARKGRAY);
-    DrawText(TextFormat("%d", highScore), SCREEN_WIDTH / 2 - MeasureText(TextFormat("%d", highScore), 50) / 2, SCREEN_HEIGHT / 4 - 120, 50, GRAY);
+    DrawTextureEx(background0, (Vector2){ 0, scrolling0 }, 0.0f, 1.0f, WHITE);
+    DrawTextureEx(background0, (Vector2){ 0, -background0.height + scrolling0 }, 0.0f, 1.0f, WHITE);
 
-    DrawText("SCORE", SCREEN_WIDTH / 2 - MeasureText("SCORE", 30) / 2, SCREEN_HEIGHT / 4 - 40, 30, DARKGRAY);
-    DrawText(TextFormat("%d", score), SCREEN_WIDTH / 2 - MeasureText(TextFormat("%d", score), 50) / 2, SCREEN_HEIGHT / 4, 50, GRAY);
+    DrawTextureEx(background1, (Vector2){ 0, scrolling1 }, 0.0f, 1.0f, WHITE);
+    DrawTextureEx(background1, (Vector2){ 0, -background1.height + scrolling1 }, 0.0f, 1.0f, WHITE);
+
+    DrawText("HIGHSCORE", SCREEN_WIDTH / 2 - MeasureText("HIGHSCORE", 30) / 2, SCREEN_HEIGHT / 4 - 160, 30, GRAY);
+    DrawText(TextFormat("%d", highScore), SCREEN_WIDTH / 2 - MeasureText(TextFormat("%d", highScore), 50) / 2, SCREEN_HEIGHT / 4 - 120, 50, WHITE);
+
+    DrawText("SCORE", SCREEN_WIDTH / 2 - MeasureText("SCORE", 30) / 2, SCREEN_HEIGHT / 4 - 40, 30, GRAY);
+    DrawText(TextFormat("%d", score), SCREEN_WIDTH / 2 - MeasureText(TextFormat("%d", score), 50) / 2, SCREEN_HEIGHT / 4, 50, WHITE);
 
     Rectangle src = { 0.0f, 0.0f, (float) playerSprite.width, (float) playerSprite.height };
     Rectangle dest = { player.rec.x, player.rec.y, player.rec.width, player.rec.height };
