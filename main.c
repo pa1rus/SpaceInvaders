@@ -2,6 +2,11 @@
 #include "stdlib.h"
 
 #define SAVE_DATA_FILE "save.data"
+#define MUSIC_PATH "./assets/audio/SpaceInvaders.mp3"
+#define PLAYER_TEXTURE_PATH "./assets/textures/player.png"
+#define PLAYER_ANIMATION_TEXTURE_PATH "./assets/textures/playerAnimation.png"
+#define ENEMY_TEXTURE_PATH "./assets/textures/enemy.png"
+#define SHOOT_TEXTURE_PATH "./assets/textures/shoot.png"
 #define MAX_SHOOTS 20
 #define MAX_ENEMIES 40
 
@@ -50,9 +55,23 @@ static float nextEnemySpawnCooldown = 0;
 static float lastEnemySpawnTime = 0;
 
 static Music music;
+static Texture2D playerSprite;
+static Texture2D playerAnimationSprite;
+static Texture2D enemySprite;
+static Texture2D shootSprite;
+
+static Rectangle enemyFrameRec;
+static int currentEnemyFrame = 0;
+static int enemyFramesCounter = 0;
+static int enemyFramesSpeed = 15;
+
+static Rectangle playerAnimationFrameRec;
+static int currentPlayerAnimationFrame = 0;
+static int playerAnimationFramesCounter = 0;
+static int playerAnimationFramesSpeed = 6;
 
 static void InitGame();
-static void UpdateGame(Music music);
+static void UpdateGame();
 static void UpdateInput();
 static void InitShoot();
 static void UpdateShoot();
@@ -60,7 +79,8 @@ static void InitEnemy();
 static void UpdateEnemy();
 static void IncreaseDifficulty();
 static void DrawGame();
-static void UpdateDrawFrame(Music music);
+static void UpdateDrawFrame();
+static void UnloadGame();
 static bool SaveValue(unsigned int position, int value);
 static int LoadValue(unsigned int position);
 
@@ -69,23 +89,25 @@ int main(){
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Space Invaders");
     SetTargetFPS(60);
 
-    InitGame();
-
     InitAudioDevice();
-    music = LoadMusicStream("SpaceInvaders.mp3");
+    music = LoadMusicStream(MUSIC_PATH);
     SetMusicVolume(music, 0.15f);
     PlayMusicStream(music);
-    
+
+    playerSprite = LoadTexture(PLAYER_TEXTURE_PATH);
+    playerAnimationSprite = LoadTexture(PLAYER_ANIMATION_TEXTURE_PATH);
+    enemySprite = LoadTexture(ENEMY_TEXTURE_PATH);
+    shootSprite = LoadTexture(SHOOT_TEXTURE_PATH);
+
+    InitGame();
 
     while(!WindowShouldClose()){
 
-        UpdateDrawFrame(music);
+        UpdateDrawFrame();
 
     }
 
-    UnloadMusicStream(music);
-    CloseAudioDevice();
-
+    UnloadGame();
     CloseWindow();
     return 0;
 }
@@ -98,8 +120,8 @@ void InitGame(){
     highScore = LoadValue(0);
     currentlevel = 0;
 
-    player.rec.width = 30;
-    player.rec.height = 30;
+    player.rec.width = 32;
+    player.rec.height = 32;
     player.rec.x =  SCREEN_WIDTH / 2 - player.rec.width / 2;
     player.rec.y = SCREEN_HEIGHT - 50 - player.rec.height;
     player.speed.x = 500;
@@ -111,10 +133,13 @@ void InitGame(){
     nextEnemySpawnCooldown = 0;
     lastEnemySpawnTime = 0;
 
+    enemyFrameRec = (Rectangle) {0.0f, 0.0f, (float) enemySprite.width / 2, (float) enemySprite.height};
+    playerAnimationFrameRec = (Rectangle) {0.0f, 0.0f, (float) playerAnimationSprite.width / 4, (float) playerAnimationSprite.height};
+
     for (int i = 0; i < MAX_SHOOTS; i++)
     {
-        shoot[i].rec.width = 5;
-        shoot[i].rec.height = 20;
+        shoot[i].rec.width = 6;
+        shoot[i].rec.height = 24;
         shoot[i].speed.x = 0;
         shoot[i].speed.y = 700;
         shoot[i].active = false;
@@ -123,8 +148,8 @@ void InitGame(){
 
     for (int j = 0; j < MAX_ENEMIES; j++){
 
-        enemy[j].rec.width = 20;
-        enemy[j].rec.height = 20;
+        enemy[j].rec.width = 24;
+        enemy[j].rec.height = 24;
         enemy[j].speed.x = 0;
         enemy[j].speed.y = 250;
         enemy[j].active = false;
@@ -132,7 +157,7 @@ void InitGame(){
     }
 }
 
-void UpdateGame(Music music){
+void UpdateGame(){
 
     UpdateMusicStream(music);
 
@@ -160,6 +185,17 @@ void UpdateGame(Music music){
 }
 
 void UpdateInput(){
+
+    playerAnimationFramesCounter++;
+
+    if (playerAnimationFramesCounter >= playerAnimationFramesSpeed) {
+
+        playerAnimationFramesCounter = 0;
+        currentPlayerAnimationFrame++;
+        if (currentPlayerAnimationFrame >= 4) currentPlayerAnimationFrame = 0;
+        float frameWidth = (float) playerAnimationSprite.width / 4.0f;
+        playerAnimationFrameRec.x = (float) currentPlayerAnimationFrame * frameWidth;
+    }
 
     if((IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))) player.rec.x -= player.speed.x * GetFrameTime();
     if((IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT))) player.rec.x += player.speed.x * GetFrameTime();
@@ -231,6 +267,16 @@ void InitEnemy(){
 
 void UpdateEnemy(){
 
+    enemyFramesCounter++;
+
+    if (enemyFramesCounter >= enemyFramesSpeed) {
+
+        enemyFramesCounter = 0;
+        currentEnemyFrame = (currentEnemyFrame + 1) % 2;
+        float frameWidth = (float) enemySprite.width / 2.0f;
+        enemyFrameRec.x = (float) currentEnemyFrame * frameWidth;
+    }
+
     if (score / 1000 >= currentlevel){
 
         currentlevel++;
@@ -281,16 +327,39 @@ void DrawGame(){
     DrawText("SCORE", SCREEN_WIDTH / 2 - MeasureText("SCORE", 30) / 2, SCREEN_HEIGHT / 4 - 40, 30, DARKGRAY);
     DrawText(TextFormat("%d", score), SCREEN_WIDTH / 2 - MeasureText(TextFormat("%d", score), 50) / 2, SCREEN_HEIGHT / 4, 50, GRAY);
 
-    DrawRectangleRec(player.rec, player.color);
+    Rectangle src = { 0.0f, 0.0f, (float) playerSprite.width, (float) playerSprite.height };
+    Rectangle dest = { player.rec.x, player.rec.y, player.rec.width, player.rec.height };
+    Vector2 origin = { 0.0f, 0.0f };
+    DrawTexturePro(playerSprite, src, dest, origin, 0.0f, WHITE);
+
+    float frameWidth = (float) playerAnimationSprite.width / 4.0f;
+    Rectangle srcPA = { playerAnimationFrameRec.x, playerAnimationFrameRec.y, frameWidth, (float) playerAnimationSprite.height };
+    Rectangle destPA = { player.rec.x + player.rec.width / 4, player.rec.y + player.rec.height, player.rec.width / 2, player.rec.height / 2 };
+    Vector2 originPA = { 0.0f, 0.0f };
+    DrawTexturePro(playerAnimationSprite, srcPA, destPA, originPA, 0.0f, WHITE);
 
     for (int j = 0; j < MAX_ENEMIES; j++){
 
-        if (enemy[j].active) DrawRectangleRec(enemy[j].rec, enemy[j].color);
+        if (enemy[j].active) {
+
+            float frameWidth = (float) enemySprite.width / 2.0f;
+            Rectangle srcE = { enemyFrameRec.x, enemyFrameRec.y, frameWidth, (float) enemySprite.height };
+            Rectangle destE = { enemy[j].rec.x, enemy[j].rec.y, enemy[j].rec.width, enemy[j].rec.height };
+            Vector2 originE = { 0.0f, 0.0f };
+            DrawTexturePro(enemySprite, srcE, destE, originE, 0.0f, WHITE);
+
+        }
     }
 
     for (int i = 0; i < MAX_SHOOTS; i++)
     {
-        if (shoot[i].active) DrawRectangleRec(shoot[i].rec, shoot[i].color);
+        if (shoot[i].active) {
+
+            Rectangle srcS = { 0.0f, 0.0f, (float) shootSprite.width, (float) shootSprite.height };
+            Rectangle destS = { shoot[i].rec.x, shoot[i].rec.y, shoot[i].rec.width, shoot[i].rec.height };
+            Vector2 originS = { 0.0f, 0.0f };
+            DrawTexturePro(shootSprite, srcS, destS, originS, 0.0f, WHITE);
+        }
     }
 
     if (pause) {
@@ -307,10 +376,20 @@ void DrawGame(){
     EndDrawing();
 }
 
-void UpdateDrawFrame(Music music)
+void UpdateDrawFrame()
 {
-    UpdateGame(music);
+    UpdateGame();
     DrawGame();
+}
+
+void UnloadGame(){
+
+    UnloadMusicStream(music);
+    UnloadTexture(playerSprite);
+    UnloadTexture(playerAnimationSprite);
+    UnloadTexture(shootSprite);
+    UnloadTexture(enemySprite);
+    CloseAudioDevice();
 }
 
 bool SaveValue(unsigned int position, int value){
