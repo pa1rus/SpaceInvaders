@@ -11,6 +11,7 @@
 #define BACKGROUND1_TEXTURE_PATH "./assets/textures/layer1.png"
 #define MAX_SHOOTS 20
 #define MAX_ENEMIES 40
+#define MAX_PARTICLES 100
 
 typedef struct {
     Rectangle rec;
@@ -32,6 +33,17 @@ typedef struct {
     Color color;
 } Shoot;
 
+typedef struct {
+    Rectangle rec;
+    Vector2 position;
+    Vector2 speed;
+    Color color;
+    float alpha;
+    float alphaSpeed;
+    float rotation;
+    bool active;
+} Particle;
+
 static const int SCREEN_WIDTH = 800;
 static const int SCREEN_HEIGHT = 800;
 static const int FPS = 60;
@@ -45,6 +57,7 @@ static int currentlevel = 0;
 static Player player = { 0 };
 static Enemy enemy[MAX_ENEMIES] = { 0 };
 static Shoot shoot[MAX_SHOOTS] = { 0 };
+static Particle enemyParticles[MAX_PARTICLES] = { 0 };
 
 static float currentTime = 0;
 
@@ -77,6 +90,14 @@ static int playerAnimationFramesSpeed = 6;
 float scrolling0 = 0.0f;
 float scrolling1 = 0.0f;
 
+int minEnemyParticleFadeOutSpeed = 12;
+int maxEnemyParticleFadeOutSpeed = 20;
+int minEnemyParticleSpeed = -600;
+int maxEnemyParticleSpeed = 600;
+int minEnemyParticleSize = 80;
+int maxEnemyParticleSize = 160;
+int enemyParticleNumber = 16;
+
 static void InitGame();
 static void UpdateGame();
 static void UpdateInput();
@@ -84,6 +105,8 @@ static void InitShoot();
 static void UpdateShoot();
 static void InitEnemy();
 static void UpdateEnemy();
+static void InitParticles(Vector2 position, int number);
+static void UpdateParticles();
 static void IncreaseDifficulty();
 static void DrawGame();
 static void UpdateDrawFrame();
@@ -164,6 +187,15 @@ void InitGame(){
         enemy[j].active = false;
         enemy[j].color = PURPLE;
     }
+
+    for (int k = 0; k < MAX_PARTICLES; k++)
+    {
+        enemyParticles[k].position = (Vector2) { 0, 0 };
+        enemyParticles[k].color = (Color) { GetRandomValue(0, 255), GetRandomValue(0, 255), GetRandomValue(0, 255), 255 };
+        enemyParticles[k].alpha = 1.0f;
+        enemyParticles[k].rotation = (float) GetRandomValue(0, 360);
+        enemyParticles[k].active = false;
+    }
 }
 
 void UpdateGame(){
@@ -185,6 +217,7 @@ void UpdateGame(){
             UpdateInput();
             UpdateShoot();
             UpdateEnemy();
+            UpdateParticles();
         }
         else{
 
@@ -258,6 +291,7 @@ void UpdateShoot(){
                 score += 100;
                 shoot[i].active = false;
                 enemy[j].active = false;
+                InitParticles((Vector2) {enemy[j].rec.x + enemy[j].rec.width / 2, enemy[j].rec.y + enemy[j].rec.height / 2}, enemyParticleNumber);
             }
         }
 
@@ -320,6 +354,58 @@ void UpdateEnemy(){
     }
 }
 
+void InitParticles(Vector2 position, int number){
+
+    int particleInitiated = 0;
+
+    for (int i = 0; i < MAX_PARTICLES; i++){
+
+        if (!enemyParticles[i].active){
+
+            float size = (float) GetRandomValue(minEnemyParticleSize, maxEnemyParticleSize) / 10.0f;
+            float speedX = (float) GetRandomValue(minEnemyParticleSpeed, maxEnemyParticleSpeed) / 10.0f;
+            float speedY = (float) GetRandomValue(minEnemyParticleSpeed, maxEnemyParticleSpeed) / 10.0f;
+            float rotation = GetRandomValue(0, 359);
+            float alphaSpeed = (float) GetRandomValue(minEnemyParticleFadeOutSpeed, maxEnemyParticleFadeOutSpeed) / 10.0f;
+            Color color = (Color) {GetRandomValue(220, 255), GetRandomValue(10, 60), GetRandomValue(220, 255)};
+            enemyParticles[i].rec.height = size;
+            enemyParticles[i].rec.width = size;
+            enemyParticles[i].speed.x = speedX;
+            enemyParticles[i].speed.y = speedY;
+            enemyParticles[i].alphaSpeed = alphaSpeed;
+            enemyParticles[i].rotation = rotation;
+            enemyParticles[i].color = color;
+            enemyParticles[i].active = true;
+            enemyParticles[i].rec.x = position.x;
+            enemyParticles[i].rec.y = position.y;
+
+            particleInitiated++;
+
+            if (particleInitiated >= number) break;
+        }
+    }
+}
+
+void UpdateParticles(){
+
+    for (int i = 0; i < MAX_PARTICLES; i++){
+
+
+        if(enemyParticles[i].active){
+
+            enemyParticles[i].alpha -= enemyParticles[i].alphaSpeed * GetFrameTime();
+            enemyParticles[i].rec.x -= enemyParticles[i].speed.x * GetFrameTime();
+            enemyParticles[i].rec.y -= enemyParticles[i].speed.y * GetFrameTime();
+
+            if(enemyParticles[i].alpha <= 0) {
+
+                enemyParticles[i].active = false;
+                enemyParticles[i].alpha = 1.0f;
+            }
+        }
+    }
+}
+
 void IncreaseDifficulty(){
 
     for (int i = 0; i < MAX_ENEMIES; i++){
@@ -350,14 +436,20 @@ void DrawGame(){
 
     Rectangle src = { 0.0f, 0.0f, (float) playerSprite.width, (float) playerSprite.height };
     Rectangle dest = { player.rec.x, player.rec.y, player.rec.width, player.rec.height };
-    Vector2 origin = { 0.0f, 0.0f };
-    DrawTexturePro(playerSprite, src, dest, origin, 0.0f, WHITE);
+    DrawTexturePro(playerSprite, src, dest, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
 
     float frameWidth = (float) playerAnimationSprite.width / 4.0f;
     Rectangle srcPA = { playerAnimationFrameRec.x, playerAnimationFrameRec.y, frameWidth, (float) playerAnimationSprite.height };
     Rectangle destPA = { player.rec.x + player.rec.width / 4, player.rec.y + player.rec.height, player.rec.width / 2, player.rec.height / 2 };
-    Vector2 originPA = { 0.0f, 0.0f };
-    DrawTexturePro(playerAnimationSprite, srcPA, destPA, originPA, 0.0f, WHITE);
+    DrawTexturePro(playerAnimationSprite, srcPA, destPA, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
+
+    for (int i = 0; i < MAX_PARTICLES; i++){
+
+        if (enemyParticles[i].active){
+
+            DrawRectanglePro(enemyParticles[i].rec, (Vector2) { 0.0f, 0.0f }, enemyParticles[i].rotation,  ColorAlpha(enemyParticles[i].color , enemyParticles[i].alpha));
+        }
+    }
 
     for (int j = 0; j < MAX_ENEMIES; j++){
 
@@ -366,20 +458,18 @@ void DrawGame(){
             float frameWidth = (float) enemySprite.width / 2.0f;
             Rectangle srcE = { enemyFrameRec.x, enemyFrameRec.y, frameWidth, (float) enemySprite.height };
             Rectangle destE = { enemy[j].rec.x, enemy[j].rec.y, enemy[j].rec.width, enemy[j].rec.height };
-            Vector2 originE = { 0.0f, 0.0f };
-            DrawTexturePro(enemySprite, srcE, destE, originE, 0.0f, WHITE);
+            DrawTexturePro(enemySprite, srcE, destE, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
 
         }
     }
 
-    for (int i = 0; i < MAX_SHOOTS; i++)
+    for (int k = 0; k < MAX_SHOOTS; k++)
     {
-        if (shoot[i].active) {
+        if (shoot[k].active) {
 
             Rectangle srcS = { 0.0f, 0.0f, (float) shootSprite.width, (float) shootSprite.height };
-            Rectangle destS = { shoot[i].rec.x, shoot[i].rec.y, shoot[i].rec.width, shoot[i].rec.height };
-            Vector2 originS = { 0.0f, 0.0f };
-            DrawTexturePro(shootSprite, srcS, destS, originS, 0.0f, WHITE);
+            Rectangle destS = { shoot[k].rec.x, shoot[k].rec.y, shoot[k].rec.width, shoot[k].rec.height };
+            DrawTexturePro(shootSprite, srcS, destS, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
         }
     }
 
