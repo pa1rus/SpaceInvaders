@@ -3,6 +3,9 @@
 
 #define SAVE_DATA_FILE "save.data"
 #define MUSIC_PATH "./assets/audio/SpaceInvaders.mp3"
+#define SHOOT_SOUND_PATH "./assets/audio/shoot.wav"
+#define ENEMY_DIE_SOUND_PATH "./assets/audio/enemy_die.wav"
+#define LOSE_SOUND_PATH "./assets/audio/lose.wav"
 #define PLAYER_TEXTURE_PATH "./assets/textures/player.png"
 #define PLAYER_ANIMATION_TEXTURE_PATH "./assets/textures/playerAnimation.png"
 #define ENEMY_TEXTURE_PATH "./assets/textures/enemy.png"
@@ -70,6 +73,9 @@ static float nextEnemySpawnCooldown = 0;
 static float lastEnemySpawnTime = 0;
 
 static Music music;
+static Sound shootSound;
+static Sound enemyDieSound;
+static Sound loseSound;
 static Texture2D playerSprite;
 static Texture2D playerAnimationSprite;
 static Texture2D enemySprite;
@@ -122,7 +128,14 @@ int main(){
     InitAudioDevice();
     music = LoadMusicStream(MUSIC_PATH);
     SetMusicVolume(music, 0.15f);
-    PlayMusicStream(music);
+
+    shootSound = LoadSound(SHOOT_SOUND_PATH);
+    enemyDieSound = LoadSound(ENEMY_DIE_SOUND_PATH);
+    loseSound = LoadSound(LOSE_SOUND_PATH);
+
+    SetSoundVolume(shootSound, 0.1f);
+    SetSoundVolume(enemyDieSound, 0.2f);
+    SetSoundVolume(loseSound, 0.3f);
 
     playerSprite = LoadTexture(PLAYER_TEXTURE_PATH);
     playerAnimationSprite = LoadTexture(PLAYER_ANIMATION_TEXTURE_PATH);
@@ -146,6 +159,8 @@ int main(){
 
 void InitGame(){
 
+    SeekMusicStream(music, 0);
+    PlayMusicStream(music);
     gameOver = false;
     pause = false;
     score = 0;
@@ -173,7 +188,7 @@ void InitGame(){
         shoot[i].rec.width = 6;
         shoot[i].rec.height = 24;
         shoot[i].speed.x = 0;
-        shoot[i].speed.y = 700;
+        shoot[i].speed.y = 1000;
         shoot[i].active = false;
         shoot[i].color = RED;
     }
@@ -262,6 +277,8 @@ void UpdateInput(){
 
 void InitShoot(){
 
+    PlaySound(shootSound);
+
     for (int i = 0; i < MAX_SHOOTS; i++){
 
         if(shoot[i].active) continue;
@@ -291,6 +308,7 @@ void UpdateShoot(){
                 score += 100;
                 shoot[i].active = false;
                 enemy[j].active = false;
+                PlaySound(enemyDieSound);
                 InitParticles((Vector2) {enemy[j].rec.x + enemy[j].rec.width / 2, enemy[j].rec.y + enemy[j].rec.height / 2}, enemyParticleNumber);
             }
         }
@@ -345,7 +363,12 @@ void UpdateEnemy(){
 
         enemy[i].rec.y += enemy[i].speed.y * GetFrameTime();
 
-        if (CheckCollisionRecs(enemy[i].rec, player.rec)) gameOver = true;
+        if (CheckCollisionRecs(enemy[i].rec, player.rec)) {
+
+            PauseMusicStream(music);
+            PlaySound(loseSound);
+            gameOver = true;
+        }
 
         if (enemy[i].rec.y >= SCREEN_HEIGHT) {
 
@@ -496,6 +519,9 @@ void UpdateDrawFrame()
 void UnloadGame(){
 
     UnloadMusicStream(music);
+    UnloadSound(shootSound);
+    UnloadSound(enemyDieSound);
+    UnloadSound(loseSound);
     UnloadTexture(playerSprite);
     UnloadTexture(playerAnimationSprite);
     UnloadTexture(shootSprite);
