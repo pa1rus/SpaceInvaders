@@ -2,12 +2,13 @@
 #include "stdlib.h"
 
 #define SAVE_DATA_FILE "save.data"
-#define MUSIC_PATH "./assets/audio/SpaceInvaders.mp3"
-#define SHOOT_SOUND_PATH "./assets/audio/shoot.wav"
-#define ENEMY_DIE_SOUND_PATH "./assets/audio/enemy_die.wav"
-#define LOSE_SOUND_PATH "./assets/audio/lose.wav"
+#define MUSIC_PATH "./assets/audio/SpaceInvaders.ogg"
+#define SHOOT_SOUND_PATH "./assets/audio/shoot.ogg"
+#define ENEMY_DIE_SOUND_PATH "./assets/audio/enemyDie.ogg"
+#define LOSE_SOUND_PATH "./assets/audio/lose.ogg"
 #define PLAYER_TEXTURE_PATH "./assets/textures/player.png"
 #define PLAYER_ANIMATION_TEXTURE_PATH "./assets/textures/playerAnimation.png"
+#define PLAYER_DIE_ANIMATION_TEXTURE_PATH "./assets/textures/playerDie.png"
 #define ENEMY_TEXTURE_PATH "./assets/textures/enemy.png"
 #define SHOOT_TEXTURE_PATH "./assets/textures/shoot.png"
 #define BACKGROUND0_TEXTURE_PATH "./assets/textures/layer0.png"
@@ -78,6 +79,7 @@ static Sound enemyDieSound;
 static Sound loseSound;
 static Texture2D playerSprite;
 static Texture2D playerAnimationSprite;
+static Texture2D playerDieAnimationSprite;
 static Texture2D enemySprite;
 static Texture2D shootSprite;
 static Texture2D background0;
@@ -93,8 +95,16 @@ static int currentPlayerAnimationFrame = 0;
 static int playerAnimationFramesCounter = 0;
 static int playerAnimationFramesSpeed = 6;
 
+static Rectangle playerDieAnimationFrameRec;
+static int currentPlayerDieAnimationFrame = 0;
+static int playerDieAnimationFramesCounter = 0;
+static int playerDieAnimationFramesSpeed = 2;
+static bool isPlayerDieAnimationFinished;
+
 float scrolling0 = 0.0f;
+float scrollin0Speed = 20;
 float scrolling1 = 0.0f;
+float scrollin1Speed = 70;
 
 int minEnemyParticleFadeOutSpeed = 12;
 int maxEnemyParticleFadeOutSpeed = 20;
@@ -113,7 +123,10 @@ static void InitEnemy();
 static void UpdateEnemy();
 static void InitParticles(Vector2 position, int number);
 static void UpdateParticles();
+static void UpdateBackground();
+static void UpdateAnimations();
 static void IncreaseDifficulty();
+static void Lose();
 static void DrawGame();
 static void UpdateDrawFrame();
 static void UnloadGame();
@@ -139,6 +152,7 @@ int main(){
 
     playerSprite = LoadTexture(PLAYER_TEXTURE_PATH);
     playerAnimationSprite = LoadTexture(PLAYER_ANIMATION_TEXTURE_PATH);
+    playerDieAnimationSprite = LoadTexture(PLAYER_DIE_ANIMATION_TEXTURE_PATH);
     enemySprite = LoadTexture(ENEMY_TEXTURE_PATH);
     shootSprite = LoadTexture(SHOOT_TEXTURE_PATH);
     background0 = LoadTexture(BACKGROUND0_TEXTURE_PATH);
@@ -182,6 +196,9 @@ void InitGame(){
 
     enemyFrameRec = (Rectangle) {0.0f, 0.0f, (float) enemySprite.width / 2, (float) enemySprite.height};
     playerAnimationFrameRec = (Rectangle) {0.0f, 0.0f, (float) playerAnimationSprite.width / 4, (float) playerAnimationSprite.height};
+    playerDieAnimationFrameRec = (Rectangle) {0.0f, 0.0f, (float) playerDieAnimationSprite.width / 4, (float) playerDieAnimationSprite.height};
+
+    isPlayerDieAnimationFinished = false;
 
     for (int i = 0; i < MAX_SHOOTS; i++)
     {
@@ -217,48 +234,36 @@ void UpdateGame(){
 
     UpdateMusicStream(music);
 
-    if (!gameOver){
+    if (!pause && !gameOver){
 
-        if (!pause){
+        currentTime = GetTime();
 
-            currentTime = GetTime();
-
-            scrolling0 += 20 * GetFrameTime();
-            scrolling1 += 70 * GetFrameTime();
-
-            if (scrolling0 >= background0.height) scrolling0 = 0;
-            if (scrolling1 >= background1.height) scrolling1 = 0;
-
-            UpdateInput();
-            UpdateShoot();
-            UpdateEnemy();
-            UpdateParticles();
-        }
-        else{
-
-            if (IsKeyPressed(KEY_P)) pause = false;
-        }
-        
+        UpdateInput();
+        UpdateShoot();
+        UpdateEnemy(); 
+        UpdateAnimations();
+        UpdateBackground();
+        UpdateParticles();
     }
     else{
 
-        if (score > highScore) SaveValue(0, score); 
+        if (IsKeyPressed(KEY_P)) pause = false;
+    }
+
+    if (gameOver){
+
+        UpdateShoot();
+        UpdateEnemy(); 
+        UpdateAnimations();
+        UpdateBackground();
+        UpdateParticles();
+
         if (IsKeyPressed(KEY_ENTER)) InitGame();
+        
     }
 }
 
 void UpdateInput(){
-
-    playerAnimationFramesCounter++;
-
-    if (playerAnimationFramesCounter >= playerAnimationFramesSpeed) {
-
-        playerAnimationFramesCounter = 0;
-        currentPlayerAnimationFrame++;
-        if (currentPlayerAnimationFrame >= 4) currentPlayerAnimationFrame = 0;
-        float frameWidth = (float) playerAnimationSprite.width / 4.0f;
-        playerAnimationFrameRec.x = (float) currentPlayerAnimationFrame * frameWidth;
-    }
 
     if((IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))) player.rec.x -= player.speed.x * GetFrameTime();
     if((IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT))) player.rec.x += player.speed.x * GetFrameTime();
@@ -334,16 +339,6 @@ void InitEnemy(){
 
 void UpdateEnemy(){
 
-    enemyFramesCounter++;
-
-    if (enemyFramesCounter >= enemyFramesSpeed) {
-
-        enemyFramesCounter = 0;
-        currentEnemyFrame = (currentEnemyFrame + 1) % 2;
-        float frameWidth = (float) enemySprite.width / 2.0f;
-        enemyFrameRec.x = (float) currentEnemyFrame * frameWidth;
-    }
-
     if (score / 1000 >= currentlevel){
 
         currentlevel++;
@@ -365,9 +360,10 @@ void UpdateEnemy(){
 
         if (CheckCollisionRecs(enemy[i].rec, player.rec)) {
 
-            PauseMusicStream(music);
-            PlaySound(loseSound);
-            gameOver = true;
+            enemy[i].active = false;
+            InitParticles((Vector2) {enemy[i].rec.x + enemy[i].rec.width / 2, enemy[i].rec.y + enemy[i].rec.height / 2}, enemyParticleNumber);
+            Lose();
+            break;
         }
 
         if (enemy[i].rec.y >= SCREEN_HEIGHT) {
@@ -429,6 +425,79 @@ void UpdateParticles(){
     }
 }
 
+void UpdateBackground(){
+
+    if (!pause){
+
+            scrolling0 += scrollin0Speed * GetFrameTime();
+            scrolling1 += scrollin1Speed * GetFrameTime();
+
+            if (scrolling0 >= background0.height) scrolling0 = 0;
+            if (scrolling1 >= background1.height) scrolling1 = 0;
+    }
+
+    if (gameOver){
+
+        if (scrollin0Speed > 8) scrollin0Speed -= 0.1f;
+        
+        if (scrollin1Speed > 16) scrollin1Speed -= 0.15f;
+    }
+}
+
+void UpdateAnimations(){
+
+    enemyFramesCounter++;
+
+    if (enemyFramesCounter >= enemyFramesSpeed) {
+
+        enemyFramesCounter = 0;
+        currentEnemyFrame = (currentEnemyFrame + 1) % 2;
+        float frameWidth = (float) enemySprite.width / 2.0f;
+        enemyFrameRec.x = (float) currentEnemyFrame * frameWidth;
+    }
+
+    if (gameOver){
+
+        for (int i = 0; i < MAX_ENEMIES; i++){
+
+            if (enemy[i].speed.y > 0) enemy[i].speed.y -= 6;
+        }
+    }
+
+    if (!gameOver){
+
+        playerAnimationFramesCounter++;
+
+        if (playerAnimationFramesCounter >= playerAnimationFramesSpeed) {
+
+            playerAnimationFramesCounter = 0;
+            currentPlayerAnimationFrame++;
+            if (currentPlayerAnimationFrame >= 4) currentPlayerAnimationFrame = 0;
+            float frameWidth = (float) playerAnimationSprite.width / 4.0f;
+            playerAnimationFrameRec.x = (float) currentPlayerAnimationFrame * frameWidth;
+        }
+    }
+    else if (!isPlayerDieAnimationFinished){
+
+        playerDieAnimationFramesCounter++;
+
+        if (playerDieAnimationFramesCounter >= playerDieAnimationFramesSpeed) {
+
+            playerDieAnimationFramesCounter = 0;
+            currentPlayerDieAnimationFrame++;
+            float frameWidth = (float) playerDieAnimationSprite.width / 10.0f;
+            playerDieAnimationFrameRec.x = (float) currentPlayerDieAnimationFrame * frameWidth;
+
+            if (currentPlayerDieAnimationFrame >= 10) {
+
+                currentPlayerDieAnimationFrame = 0;
+                playerDieAnimationFramesCounter = 0;
+                isPlayerDieAnimationFinished = true;
+            }
+        }
+    }
+}
+
 void IncreaseDifficulty(){
 
     for (int i = 0; i < MAX_ENEMIES; i++){
@@ -438,6 +507,15 @@ void IncreaseDifficulty(){
 
     minEnemySpawncooldown *= 0.9;
     maxEnemySpawncooldown *= 0.8;
+}
+
+void Lose(){
+
+    if (score > highScore) SaveValue(0, score); 
+    PauseMusicStream(music);
+    PlaySound(loseSound);
+    gameOver = true;
+            
 }
 
 void DrawGame(){
@@ -457,14 +535,24 @@ void DrawGame(){
     DrawText("SCORE", SCREEN_WIDTH / 2 - MeasureText("SCORE", 30) / 2, SCREEN_HEIGHT / 4 - 40, 30, GRAY);
     DrawText(TextFormat("%d", score), SCREEN_WIDTH / 2 - MeasureText(TextFormat("%d", score), 50) / 2, SCREEN_HEIGHT / 4, 50, WHITE);
 
-    Rectangle src = { 0.0f, 0.0f, (float) playerSprite.width, (float) playerSprite.height };
-    Rectangle dest = { player.rec.x, player.rec.y, player.rec.width, player.rec.height };
-    DrawTexturePro(playerSprite, src, dest, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
+    if (!gameOver){
 
-    float frameWidth = (float) playerAnimationSprite.width / 4.0f;
-    Rectangle srcPA = { playerAnimationFrameRec.x, playerAnimationFrameRec.y, frameWidth, (float) playerAnimationSprite.height };
-    Rectangle destPA = { player.rec.x + player.rec.width / 4, player.rec.y + player.rec.height, player.rec.width / 2, player.rec.height / 2 };
-    DrawTexturePro(playerAnimationSprite, srcPA, destPA, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
+        Rectangle srcP = { 0.0f, 0.0f, (float) playerSprite.width, (float) playerSprite.height };
+        Rectangle destP = { player.rec.x, player.rec.y, player.rec.width, player.rec.height };
+        DrawTexturePro(playerSprite, srcP, destP, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
+
+        float frameWidth = (float) playerAnimationSprite.width / 4.0f;
+        Rectangle srcPA = { playerAnimationFrameRec.x, playerAnimationFrameRec.y, frameWidth, (float) playerAnimationSprite.height };
+        Rectangle destPA = { player.rec.x + player.rec.width / 4, player.rec.y + player.rec.height, player.rec.width / 2, player.rec.height / 2 };
+        DrawTexturePro(playerAnimationSprite, srcPA, destPA, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
+    }
+    else if (!isPlayerDieAnimationFinished){
+
+        float frameWidth = (float) playerDieAnimationSprite.width / 10.0f;
+        Rectangle srcPDA = { playerDieAnimationFrameRec.x, playerAnimationFrameRec.y, frameWidth, (float) playerDieAnimationSprite.height };
+        Rectangle destPDA = { player.rec.x, player.rec.y, player.rec.width, player.rec.height };
+        DrawTexturePro(playerDieAnimationSprite, srcPDA, destPDA, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
+    }
 
     for (int i = 0; i < MAX_PARTICLES; i++){
 
