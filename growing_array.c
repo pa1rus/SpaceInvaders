@@ -63,3 +63,41 @@ void pop(growing_array* ga){
     }
 }
 
+void free_array(growing_array *ga){
+    free(ga->elements);
+}
+
+/*
+Example usage of growing_array for bullets in a game:
+
+// Define a bullet struct
+typedef struct {
+    float x, y;    // position
+    float vx, vy;  // velocity
+    int damage;    // damage
+} Bullet;
+
+// Initialize a growing array for bullets
+growing_array bullets = growing_array_init(8, sizeof(Bullet));
+
+// Push a bullet
+Bullet b = {100.0f, 200.0f, 0.0f, -5.0f, 10};
+push(&bullets, &b);
+
+// Push an anonymous bullet
+push(&bullets, &(Bullet){150.0f, 300.0f, 2.0f, -4.0f, 5});
+
+// Access and update bullets
+for (int i = 0; i < bullets.size; i++) {
+    Bullet* blt = (Bullet*)at(&bullets, i);
+    blt->x += blt->vx;
+    blt->y += blt->vy;
+}
+
+// Remove the last bullet
+pop(&bullets);
+
+// Free memory when done
+free_array(&bullets);
+*/
+
