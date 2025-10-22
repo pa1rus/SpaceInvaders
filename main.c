@@ -48,6 +48,17 @@ typedef struct {
     bool active;
 } Particle;
 
+typedef struct {
+    Rectangle frameRec;
+    int frames;
+    int frameCounter;
+    int currentFrame;
+    int frameSpeed;
+    bool repeat;
+    bool isFinished;
+    float frameWidth;
+} Animation;
+
 static const int SCREEN_WIDTH = 800;
 static const int SCREEN_HEIGHT = 800;
 static const int FPS = 60;
@@ -62,6 +73,9 @@ static Player player = { 0 };
 static Enemy enemy[MAX_ENEMIES] = { 0 };
 static Shoot shoot[MAX_SHOOTS] = { 0 };
 static Particle enemyParticles[MAX_PARTICLES] = { 0 };
+static Animation enemyAnimation = { 0 };
+static Animation playerAnimation = { 0 };
+static Animation playerDieAnimation = { 0 };
 
 static float currentTime = 0;
 
@@ -84,22 +98,6 @@ static Texture2D enemySprite;
 static Texture2D shootSprite;
 static Texture2D background0;
 static Texture2D background1;
-
-static Rectangle enemyFrameRec;
-static int currentEnemyFrame = 0;
-static int enemyFramesCounter = 0;
-static int enemyFramesSpeed = 15;
-
-static Rectangle playerAnimationFrameRec;
-static int currentPlayerAnimationFrame = 0;
-static int playerAnimationFramesCounter = 0;
-static int playerAnimationFramesSpeed = 6;
-
-static Rectangle playerDieAnimationFrameRec;
-static int currentPlayerDieAnimationFrame = 0;
-static int playerDieAnimationFramesCounter = 0;
-static int playerDieAnimationFramesSpeed = 2;
-static bool isPlayerDieAnimationFinished;
 
 float scrolling0 = 0.0f;
 float scrollin0Speed = 20;
@@ -194,11 +192,30 @@ void InitGame(){
     nextEnemySpawnCooldown = 0;
     lastEnemySpawnTime = 0;
 
-    enemyFrameRec = (Rectangle) {0.0f, 0.0f, (float) enemySprite.width / 2, (float) enemySprite.height};
-    playerAnimationFrameRec = (Rectangle) {0.0f, 0.0f, (float) playerAnimationSprite.width / 4, (float) playerAnimationSprite.height};
-    playerDieAnimationFrameRec = (Rectangle) {0.0f, 0.0f, (float) playerDieAnimationSprite.width / 4, (float) playerDieAnimationSprite.height};
+    enemyAnimation.currentFrame = 0;
+    enemyAnimation.frameCounter = 0;
+    enemyAnimation.frameRec = (Rectangle) {0.0f, 0.0f, (float) enemySprite.width / 2.0f, (float) enemySprite.height};
+    enemyAnimation.frames = 1;
+    enemyAnimation.frameSpeed = 15;
+    enemyAnimation.frameWidth = (float) enemySprite.width / 2.0f;
+    enemyAnimation.repeat = true;
 
-    isPlayerDieAnimationFinished = false;
+    playerAnimation.currentFrame = 0;
+    playerAnimation.frameCounter = 0;
+    playerAnimation.frameRec = (Rectangle) {0.0f, 0.0f, (float) playerAnimationSprite.width / 4.0f, (float) playerAnimationSprite.height};
+    playerAnimation.frames = 3;
+    playerAnimation.frameSpeed = 6;
+    playerAnimation.frameWidth = (float) playerAnimationSprite.width / 4.0f;
+    playerAnimation.repeat = true;
+
+    playerDieAnimation.currentFrame = 0;
+    playerDieAnimation.frameCounter = 0;
+    playerDieAnimation.frameRec = (Rectangle) {0.0f, 0.0f, (float) playerDieAnimationSprite.width / 10.0f, (float) playerDieAnimationSprite.height};
+    playerDieAnimation.frames = 9;
+    playerDieAnimation.frameSpeed = 2;
+    playerDieAnimation.frameWidth = (float) playerDieAnimationSprite.width / 10.0f;
+    playerDieAnimation.repeat = false;
+    playerDieAnimation.isFinished = false;
 
     for (int i = 0; i < MAX_SHOOTS; i++)
     {
@@ -438,22 +455,21 @@ void UpdateBackground(){
 
     if (gameOver){
 
-        if (scrollin0Speed > 8) scrollin0Speed -= 0.1f;
+        if (scrollin0Speed > 8) scrollin0Speed -= 10 * GetFrameTime();
         
-        if (scrollin1Speed > 16) scrollin1Speed -= 0.15f;
+        if (scrollin1Speed > 16) scrollin1Speed -= 20 * GetFrameTime();
     }
 }
 
 void UpdateAnimations(){
 
-    enemyFramesCounter++;
+    enemyAnimation.frameCounter++;
 
-    if (enemyFramesCounter >= enemyFramesSpeed) {
+    if (enemyAnimation.frameCounter >= enemyAnimation.frameSpeed) {
 
-        enemyFramesCounter = 0;
-        currentEnemyFrame = (currentEnemyFrame + 1) % 2;
-        float frameWidth = (float) enemySprite.width / 2.0f;
-        enemyFrameRec.x = (float) currentEnemyFrame * frameWidth;
+        enemyAnimation.frameCounter = 0;
+        enemyAnimation.currentFrame = (enemyAnimation.currentFrame + 1) % 2;
+        enemyAnimation.frameRec.x = (float) enemyAnimation.currentFrame * enemyAnimation.frameWidth;
     }
 
     if (gameOver){
@@ -466,33 +482,29 @@ void UpdateAnimations(){
 
     if (!gameOver){
 
-        playerAnimationFramesCounter++;
+        playerAnimation.frameCounter++;
 
-        if (playerAnimationFramesCounter >= playerAnimationFramesSpeed) {
+        if (playerAnimation.frameCounter >= playerAnimation.frameSpeed) {
 
-            playerAnimationFramesCounter = 0;
-            currentPlayerAnimationFrame++;
-            if (currentPlayerAnimationFrame >= 4) currentPlayerAnimationFrame = 0;
-            float frameWidth = (float) playerAnimationSprite.width / 4.0f;
-            playerAnimationFrameRec.x = (float) currentPlayerAnimationFrame * frameWidth;
+            playerAnimation.frameCounter = 0;
+            playerAnimation.currentFrame++;
+            if (playerAnimation.currentFrame >= 4) playerAnimation.currentFrame = 0;
+            playerAnimation.frameRec.x = (float) playerAnimation.currentFrame * playerAnimation.frameWidth;
         }
     }
-    else if (!isPlayerDieAnimationFinished){
+    else if (!playerDieAnimation.isFinished){
 
-        playerDieAnimationFramesCounter++;
+        playerDieAnimation.frameCounter++;
 
-        if (playerDieAnimationFramesCounter >= playerDieAnimationFramesSpeed) {
+        if (playerDieAnimation.frameCounter >= playerDieAnimation.frameSpeed) {
 
-            playerDieAnimationFramesCounter = 0;
-            currentPlayerDieAnimationFrame++;
-            float frameWidth = (float) playerDieAnimationSprite.width / 10.0f;
-            playerDieAnimationFrameRec.x = (float) currentPlayerDieAnimationFrame * frameWidth;
+            playerDieAnimation.frameCounter = 0;
+            playerDieAnimation.currentFrame++;
+            playerDieAnimation.frameRec.x = (float) playerDieAnimation.currentFrame * playerDieAnimation.frameWidth;
 
-            if (currentPlayerDieAnimationFrame >= 10) {
+            if (playerDieAnimation.currentFrame >= 10) {
 
-                currentPlayerDieAnimationFrame = 0;
-                playerDieAnimationFramesCounter = 0;
-                isPlayerDieAnimationFinished = true;
+                playerDieAnimation.isFinished = true;
             }
         }
     }
@@ -541,15 +553,13 @@ void DrawGame(){
         Rectangle destP = { player.rec.x, player.rec.y, player.rec.width, player.rec.height };
         DrawTexturePro(playerSprite, srcP, destP, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
 
-        float frameWidth = (float) playerAnimationSprite.width / 4.0f;
-        Rectangle srcPA = { playerAnimationFrameRec.x, playerAnimationFrameRec.y, frameWidth, (float) playerAnimationSprite.height };
-        Rectangle destPA = { player.rec.x + player.rec.width / 4, player.rec.y + player.rec.height, player.rec.width / 2, player.rec.height / 2 };
+        Rectangle srcPA = { playerAnimation.frameRec.x, playerAnimation.frameRec.y, playerAnimation.frameWidth, (float) playerAnimationSprite.height };
+        Rectangle destPA = { player.rec.x + player.rec.width / 4.0f, player.rec.y + player.rec.height, player.rec.width / 2.0f, player.rec.height / 2.0f };
         DrawTexturePro(playerAnimationSprite, srcPA, destPA, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
     }
-    else if (!isPlayerDieAnimationFinished){
+    else if (!playerDieAnimation.isFinished){
 
-        float frameWidth = (float) playerDieAnimationSprite.width / 10.0f;
-        Rectangle srcPDA = { playerDieAnimationFrameRec.x, playerAnimationFrameRec.y, frameWidth, (float) playerDieAnimationSprite.height };
+        Rectangle srcPDA = { playerDieAnimation.frameRec.x, playerDieAnimation.frameRec.y, playerDieAnimation.frameWidth, (float) playerDieAnimationSprite.height };
         Rectangle destPDA = { player.rec.x, player.rec.y, player.rec.width, player.rec.height };
         DrawTexturePro(playerDieAnimationSprite, srcPDA, destPDA, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
     }
@@ -566,8 +576,7 @@ void DrawGame(){
 
         if (enemy[j].active) {
 
-            float frameWidth = (float) enemySprite.width / 2.0f;
-            Rectangle srcE = { enemyFrameRec.x, enemyFrameRec.y, frameWidth, (float) enemySprite.height };
+            Rectangle srcE = { enemyAnimation.frameRec.x, enemyAnimation.frameRec.y, enemyAnimation.frameWidth, (float) enemySprite.height };
             Rectangle destE = { enemy[j].rec.x, enemy[j].rec.y, enemy[j].rec.width, enemy[j].rec.height };
             DrawTexturePro(enemySprite, srcE, destE, (Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
 
