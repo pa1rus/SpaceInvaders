@@ -1,24 +1,14 @@
-#include <stdlib.h>
+#include "growing_array.h"
 #include <stdio.h>
 #include <string.h>
 #define INTERVAL 4
-//this is meant to be included in some other program
-
-typedef struct {
-    int size;
-    int capacity;
-    int data_size;
-    void* elements;
-} GrowingArray;
 
 //init the array
-GrowingArray growing_array_init(int starting_capacity,int data_size){
-    GrowingArray ga;
-    ga.size = 0;
-    ga.capacity = starting_capacity;
-    ga.data_size = data_size;
-    ga.elements = malloc(ga.data_size * starting_capacity);
-    return ga;
+void growing_array_init(GrowingArray *ga, int starting_capacity,int data_size){
+    ga->size = 0;
+    ga->capacity = starting_capacity;
+    ga->data_size = data_size;
+    ga->elements = malloc(ga->data_size * starting_capacity);
 }
 
 void* at(GrowingArray* ga, int index){
