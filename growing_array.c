@@ -9,11 +9,11 @@ typedef struct {
     int capacity;
     int data_size;
     void* elements;
-} growing_array;
+} GrowingArray;
 
 //init the array
-growing_array growing_array_init(int starting_capacity,int data_size){
-    growing_array ga;
+GrowingArray growing_array_init(int starting_capacity,int data_size){
+    GrowingArray ga;
     ga.size = 0;
     ga.capacity = starting_capacity;
     ga.data_size = data_size;
@@ -21,7 +21,7 @@ growing_array growing_array_init(int starting_capacity,int data_size){
     return ga;
 }
 
-void* at(growing_array* ga, int index){
+void* at(GrowingArray* ga, int index){
     if (index < ga->size){
         return (char*)ga->elements + index * ga->data_size;
     } else {
@@ -30,7 +30,7 @@ void* at(growing_array* ga, int index){
     }
 }
 
-void push(growing_array* ga, void *elem){
+void push(GrowingArray* ga, void *elem){
     int index = ga->size; 
     if (ga->size == ga->capacity){
         ga->capacity += INTERVAL;
@@ -48,7 +48,7 @@ void push(growing_array* ga, void *elem){
     ga->size++;
 }
 
-void pop(growing_array* ga){
+void pop(GrowingArray* ga){
     if (ga->size != 0){
         ga->size--;
         if (ga->size == ga->capacity - INTERVAL){
@@ -63,7 +63,7 @@ void pop(growing_array* ga){
     }
 }
 
-void free_array(growing_array *ga){
+void free_array(GrowingArray *ga){
     free(ga->elements);
 }
 
