@@ -1,0 +1,26 @@
+#ifndef BULLETS_H
+#define BULLETS_H
+
+#include "raylib.h"
+#include "globals.h"
+#include "player.h"
+#include "music.h"
+#include "enemies.h"
+
+typedef struct {
+    Rectangle rec;
+    Vector2 speed;
+    bool active;
+    Color color;
+} Shoot;
+
+extern Shoot shoot[];
+
+extern float shootCooldown;
+extern float lastShootTime;
+
+void InitShoots();
+void InitShoot();
+void UpdateShoots();
+
+#endif
