@@ -5,7 +5,7 @@
 #include "globals.h"
 #include "stdlib.h"
 
-bool SaveValue(unsigned int position, int value);
-int LoadValue(unsigned int position);
+bool SaveValue(int value);
+int LoadValue();
 
 #endif

@@ -6,15 +6,18 @@
 #include "player.h"
 #include "music.h"
 #include "enemies.h"
+#include "array.h"
+#include "particles.h"
 
-typedef struct {
+typedef struct
+{
     Rectangle rec;
     Vector2 speed;
     bool active;
     Color color;
-} Shoot;
+} Bullet;
 
-extern Shoot shoot[];
+extern Array bullets;
 
 extern float shootCooldown;
 extern float lastShootTime;

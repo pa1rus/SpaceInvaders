@@ -6,20 +6,23 @@
 #include "particles.h"
 #include "game.h"
 #include "player.h"
+#include "array.h"
 
-typedef struct {
+typedef struct
+{
     Rectangle rec;
     Vector2 speed;
     bool active;
     Color color;
 } Enemy;
 
-extern Enemy enemy[];
+extern Array enemies;
 
 extern int minEnemySpawncooldown;
 extern int maxEnemySpawncooldown;
 extern float nextEnemySpawnCooldown;
 extern float lastEnemySpawnTime;
+extern int currentBaseEnemySpeed;
 
 void InitEnemies();
 void SpawnEnemy();

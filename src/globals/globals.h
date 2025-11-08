@@ -15,9 +15,6 @@
 #define SHOOT_TEXTURE_PATH "./assets/textures/shoot.png"
 #define BACKGROUND0_TEXTURE_PATH "./assets/textures/layer0.png"
 #define BACKGROUND1_TEXTURE_PATH "./assets/textures/layer1.png"
-#define MAX_SHOOTS 20
-#define MAX_ENEMIES 40
-#define MAX_PARTICLES 100
 
 extern const int SCREEN_WIDTH;
 extern const int SCREEN_HEIGHT;

@@ -1,75 +1,74 @@
 #include "particles.h"
 
-Particle enemyParticles[MAX_PARTICLES] = { 0 };
+Array enemyParticles;
 
-int minEnemyParticleFadeOutSpeed = 12;
-int maxEnemyParticleFadeOutSpeed = 20;
-int minEnemyParticleSpeed = -600;
-int maxEnemyParticleSpeed = 600;
-int minEnemyParticleSize = 80;
-int maxEnemyParticleSize = 160;
-int enemyParticleNumber = 16;
+ParticleConfig enemyParticleConfig = {
+    .minR = 220, .maxR = 255, 
+    .minG = 10, .maxG = 60, 
+    .minB = 220, .maxB = 255, 
+    .minFadeOutSpeed = 12, .maxFadeOutSpeed = 20, 
+    .minSpeed = -600, .maxSpeed = 600, 
+    .minSize = 80, .maxSize = 160, 
+    .burst = 16
+};
 
-void InitParticles(){
+void InitParticles()
+{
 
-    for (int k = 0; k < MAX_PARTICLES; k++)
-    {
-        enemyParticles[k].position = (Vector2) { 0, 0 };
-        enemyParticles[k].color = (Color) { GetRandomValue(0, 255), GetRandomValue(0, 255), GetRandomValue(0, 255), 255 };
-        enemyParticles[k].alpha = 1.0f;
-        enemyParticles[k].rotation = (float) GetRandomValue(0, 360);
-        enemyParticles[k].active = false;
-    }
+    arrayInit(&enemyParticles, 64, sizeof(Particle));
 }
 
-void SpawnParticles(Vector2 position, int number){
+void SpawnParticles(Vector2 position, ParticleConfig config)
+{
 
     int particleInitiated = 0;
 
-    for (int i = 0; i < MAX_PARTICLES; i++){
+    Particle p = {
 
-        if (!enemyParticles[i].active){
+        .alpha = 1.0f};
 
-            float size = (float) GetRandomValue(minEnemyParticleSize, maxEnemyParticleSize) / 10.0f;
-            float speedX = (float) GetRandomValue(minEnemyParticleSpeed, maxEnemyParticleSpeed) / 10.0f;
-            float speedY = (float) GetRandomValue(minEnemyParticleSpeed, maxEnemyParticleSpeed) / 10.0f;
-            float rotation = GetRandomValue(0, 359);
-            float alphaSpeed = (float) GetRandomValue(minEnemyParticleFadeOutSpeed, maxEnemyParticleFadeOutSpeed) / 10.0f;
-            Color color = (Color) {GetRandomValue(220, 255), GetRandomValue(10, 60), GetRandomValue(220, 255)};
-            enemyParticles[i].rec.height = size;
-            enemyParticles[i].rec.width = size;
-            enemyParticles[i].speed.x = speedX;
-            enemyParticles[i].speed.y = speedY;
-            enemyParticles[i].alphaSpeed = alphaSpeed;
-            enemyParticles[i].rotation = rotation;
-            enemyParticles[i].color = color;
-            enemyParticles[i].active = true;
-            enemyParticles[i].rec.x = position.x;
-            enemyParticles[i].rec.y = position.y;
+    for (int i = 0; i < config.burst; i++)
+    {
 
-            particleInitiated++;
+        arrayPush(&enemyParticles, &p);
 
-            if (particleInitiated >= number) break;
-        }
+        float size = (float)GetRandomValue(config.minSize, config.maxSize) / 10.0f;
+        float speedX = (float)GetRandomValue(config.minSpeed, config.maxSpeed) / 10.0f;
+        float speedY = (float)GetRandomValue(config.minSpeed, config.maxSpeed) / 10.0f;
+        float alphaSpeed = (float)GetRandomValue(config.minFadeOutSpeed, config.maxFadeOutSpeed) / 10.0f;
+        float rotation = GetRandomValue(0, 359);
+        Color color = (Color){GetRandomValue(config.minR, config.maxR), GetRandomValue(config.minG, config.maxG), GetRandomValue(config.minB, config.maxB)};
+        p.rec.height = size;
+        p.rec.width = size;
+        p.speed.x = speedX;
+        p.speed.y = speedY;
+        p.alphaSpeed = alphaSpeed;
+        p.rotation = rotation;
+        p.color = color;
+        p.rec.x = position.x;
+        p.rec.y = position.y;
+
+        particleInitiated++;
     }
 }
 
-void UpdateParticles(){
+void UpdateParticles()
+{
 
-    for (int i = 0; i < MAX_PARTICLES; i++){
+    for (int i = 0; i < enemyParticles.size; i++)
+    {
 
+        Particle *p = (Particle *)arrayAt(&enemyParticles, i);
 
-        if(enemyParticles[i].active){
+        p->alpha -= p->alphaSpeed * GetFrameTime();
+        p->rec.x -= p->speed.x * GetFrameTime();
+        p->rec.y -= p->speed.y * GetFrameTime();
 
-            enemyParticles[i].alpha -= enemyParticles[i].alphaSpeed * GetFrameTime();
-            enemyParticles[i].rec.x -= enemyParticles[i].speed.x * GetFrameTime();
-            enemyParticles[i].rec.y -= enemyParticles[i].speed.y * GetFrameTime();
+        if (p->alpha <= 0)
+        {
 
-            if(enemyParticles[i].alpha <= 0) {
-
-                enemyParticles[i].active = false;
-                enemyParticles[i].alpha = 1.0f;
-            }
+            arraySwapRemove(&enemyParticles, i);
+            i--;
         }
     }
 }

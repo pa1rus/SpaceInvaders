@@ -1,75 +1,86 @@
 #include "enemies.h"
 
-Enemy enemy[MAX_ENEMIES] = { 0 };
+Array enemies;
 
 int minEnemySpawncooldown = 0;
 int maxEnemySpawncooldown = 0;
 float nextEnemySpawnCooldown = 0;
 float lastEnemySpawnTime = 0;
+int currentBaseEnemySpeed = 250;
 
-void InitEnemies(){
+Enemy baseEnemy = {
 
-    for (int j = 0; j < MAX_ENEMIES; j++){
+    .rec.width = 24,
+    .rec.height = 24,
+    .speed.x = 0,
+    .speed.y = 250,
+};
 
-        enemy[j].rec.width = 24;
-        enemy[j].rec.height = 24;
-        enemy[j].speed.x = 0;
-        enemy[j].speed.y = 250;
-        enemy[j].active = false;
-        enemy[j].color = PURPLE;
+void InitEnemies()
+{
 
-        minEnemySpawncooldown = 250;
-        maxEnemySpawncooldown = 500;
-        nextEnemySpawnCooldown = 0;
-        lastEnemySpawnTime = 0;
-    }
+    arrayInit(&enemies, 16, sizeof(Enemy));
+
+    minEnemySpawncooldown = 250;
+    maxEnemySpawncooldown = 500;
+    nextEnemySpawnCooldown = 0;
+    lastEnemySpawnTime = 0;
+    currentBaseEnemySpeed = 250;
 }
 
-void SpawnEnemy(){
+void SpawnEnemy()
+{
 
-    for (int i = 0; i < MAX_ENEMIES; i++){
+    Enemy e = baseEnemy;
 
-        if (enemy[i].active) continue;
+    e.rec.x = GetRandomValue(0, SCREEN_WIDTH - e.rec.width);
+    e.rec.y = 0 - e.rec.height;
+    e.speed.y = currentBaseEnemySpeed;
 
-        enemy[i].active = true;
-        enemy[i].rec.x = GetRandomValue(0, SCREEN_WIDTH - enemy[i].rec.width);
-        enemy[i].rec.y = 0 - enemy[i].rec.height;
-        break;
-    }
+    arrayPush(&enemies, &e);
 }
 
-void UpdateEnemy(){
+void UpdateEnemy()
+{
 
-    if (score / 1000 >= currentlevel){
+    if (score / 1000 >= currentlevel)
+    {
 
         currentlevel++;
         IncreaseDifficulty();
     }
 
-    if (currentTime - lastEnemySpawnTime >= nextEnemySpawnCooldown) {
+    if (currentTime - lastEnemySpawnTime >= nextEnemySpawnCooldown)
+    {
 
-        nextEnemySpawnCooldown = (float) GetRandomValue(minEnemySpawncooldown, maxEnemySpawncooldown) / 1000;
+        nextEnemySpawnCooldown = (float)GetRandomValue(minEnemySpawncooldown, maxEnemySpawncooldown) / 1000;
         lastEnemySpawnTime = currentTime;
         SpawnEnemy();
     }
 
-    for (int i = 0; i < MAX_ENEMIES; i++){
+    for (int i = 0; i < enemies.size; i++)
+    {
 
-        if (!enemy[i].active) continue;
+        Enemy *e = arrayAt(&enemies, i);
 
-        enemy[i].rec.y += enemy[i].speed.y * GetFrameTime();
+        e->rec.y += e->speed.y * GetFrameTime();
 
-        if (CheckCollisionRecs(enemy[i].rec, player.rec)) {
+        if (CheckCollisionRecs(e->rec, player.rec))
+        {
 
-            enemy[i].active = false;
-            InitParticles((Vector2) {enemy[i].rec.x + enemy[i].rec.width / 2, enemy[i].rec.y + enemy[i].rec.height / 2}, enemyParticleNumber);
+            arraySwapRemove(&enemies, i);
+            i--;
+
+            SpawnParticles((Vector2){e->rec.x + e->rec.width / 2, e->rec.y + e->rec.height / 2}, enemyParticleConfig);
             Lose();
             break;
         }
 
-        if (enemy[i].rec.y >= SCREEN_HEIGHT) {
+        if (e->rec.y >= SCREEN_HEIGHT)
+        {
 
-            enemy[i].active = false;
+            arraySwapRemove(&enemies, i);
+            i--;
         }
     }
 }

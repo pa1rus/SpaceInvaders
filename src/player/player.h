@@ -6,7 +6,8 @@
 #include "game.h"
 #include "bullets.h"
 
-typedef struct {
+typedef struct
+{
     Rectangle rec;
     Vector2 speed;
     Color color;

@@ -4,7 +4,8 @@
 #include "raylib.h"
 #include "game.h"
 
-typedef struct {
+typedef struct
+{
     Rectangle frameRec;
     int frames;
     int frameCounter;

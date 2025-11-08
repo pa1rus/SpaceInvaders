@@ -1,62 +1,72 @@
 #include "bullets.h"
 
-Shoot shoot[MAX_SHOOTS] = { 0 };
+Array bullets;
 
 float shootCooldown = 0.15;
 float lastShootTime = 0;
 
-void InitShoots(){
+void InitShoots()
+{
 
-    for (int i = 0; i < MAX_SHOOTS; i++)
-    {
-        shoot[i].rec.width = 6;
-        shoot[i].rec.height = 24;
-        shoot[i].speed.x = 0;
-        shoot[i].speed.y = 1000;
-        shoot[i].active = false;
-        shoot[i].color = RED;
-    }
-
+    arrayInit(&bullets, 8, sizeof(Bullet));
 }
 
-void InitShoot(){
+void InitShoot()
+{
 
     PlaySound(shootSound);
 
-    for (int i = 0; i < MAX_SHOOTS; i++){
+    Bullet b = {
+        .rec = {
+            player.rec.x + player.rec.width / 2 - 3,
+            player.rec.y - 24,
+            6,
+            24},
+        .speed = {0, 1000},
+        .active = true,
+        .color = RED};
 
-        if(shoot[i].active) continue;
-
-        shoot[i].rec.x = player.rec.x + player.rec.width / 2 - shoot[i].rec.width / 2;
-        shoot[i].rec.y = player.rec.y - shoot[i].rec.height;
-        shoot[i].active = true;
-
-        break;
-    }
+    arrayPush(&bullets, &b);
 }
 
-void UpdateShoots(){
+void UpdateShoots()
+{
 
-    for (int i = 0; i < MAX_SHOOTS; i++){
+    for (int i = 0; i < bullets.size; i++)
+    {
 
-        if (!shoot[i].active) continue;
+        Bullet *b = arrayAt(&bullets, i);
+        if (!b->active)
+            continue;
 
-        shoot[i].rec.y -= shoot[i].speed.y * GetFrameTime();
+        b->rec.y -= b->speed.y * GetFrameTime();
 
-        for (int j = 0; j < MAX_ENEMIES; j++){
+        for (int j = 0; j < enemies.size; j++)
+        {
 
-            if (!enemy[j].active) continue;
+            Enemy *e = arrayAt(&enemies, j);
 
-            if (CheckCollisionRecs(shoot[i].rec, enemy[j].rec)) {
+            if (CheckCollisionRecs(b->rec, e->rec))
+            {
 
                 score += 100;
-                shoot[i].active = false;
-                enemy[j].active = false;
+
                 PlaySound(enemyDieSound);
-                SpawnParticles((Vector2) {enemy[j].rec.x + enemy[j].rec.width / 2, enemy[j].rec.y + enemy[j].rec.height / 2}, enemyParticleNumber);
+                SpawnParticles((Vector2){e->rec.x + e->rec.width / 2, e->rec.y + e->rec.height / 2}, enemyParticleConfig);
+
+                arraySwapRemove(&bullets, i);
+                i--;
+
+                arraySwapRemove(&enemies, j);
+                j--;
             }
         }
 
-        if (shoot[i].rec.y < 0 - shoot[i].rec.height) shoot[i].active = false;
+        if (b->rec.y < -b->rec.height)
+        {
+
+            arraySwapRemove(&bullets, i);
+            i--;
+        }
     }
 }

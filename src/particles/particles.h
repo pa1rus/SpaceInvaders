@@ -3,8 +3,10 @@
 
 #include "raylib.h"
 #include "globals.h"
+#include "array.h"
 
-typedef struct {
+typedef struct
+{
     Rectangle rec;
     Vector2 position;
     Vector2 speed;
@@ -12,10 +14,21 @@ typedef struct {
     float alpha;
     float alphaSpeed;
     float rotation;
-    bool active;
 } Particle;
 
-extern Particle enemyParticles[];
+typedef struct
+{
+    int minR, maxR;
+    int minG, maxG;
+    int minB, maxB;
+    int minFadeOutSpeed, maxFadeOutSpeed;
+    int minSpeed, maxSpeed;
+    int minSize, maxSize;
+    int burst;
+} ParticleConfig;
+
+extern Array enemyParticles;
+extern ParticleConfig enemyParticleConfig;
 
 extern int minEnemyParticleFadeOutSpeed;
 extern int maxEnemyParticleFadeOutSpeed;

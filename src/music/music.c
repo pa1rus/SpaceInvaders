@@ -5,7 +5,8 @@ Sound shootSound;
 Sound enemyDieSound;
 Sound loseSound;
 
-void InitMusic(){
+void InitMusic()
+{
 
     InitAudioDevice();
     music = LoadMusicStream(MUSIC_PATH);
@@ -20,7 +21,8 @@ void InitMusic(){
     SetSoundVolume(loseSound, 0.3f);
 }
 
-void StartMusic(){
+void StartMusic()
+{
 
     SeekMusicStream(music, 0);
     PlayMusicStream(music);

@@ -4,7 +4,8 @@
 #include "music.h"
 #include "animations.h"
 
-int main(){
+int main()
+{
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Space Invaders");
     SetTargetFPS(60);
@@ -14,10 +15,10 @@ int main(){
 
     InitGame();
 
-    while(!WindowShouldClose()){
+    while (!WindowShouldClose())
+    {
 
         UpdateDrawFrame();
-
     }
 
     UnloadGame();

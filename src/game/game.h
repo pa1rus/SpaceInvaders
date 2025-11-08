@@ -7,6 +7,7 @@
 #include "saves.h"
 #include "animations.h"
 #include "music.h"
+#include "bullets.h"
 
 extern bool gameOver;
 extern bool pause;
