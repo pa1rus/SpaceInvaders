@@ -120,8 +120,6 @@ void DrawGame()
     for (int k = 0; k < bullets.size; k++)
     {
         Bullet *b = (Bullet *)arrayAt(&bullets, k);
-        if (!b->active)
-            continue;
 
         Rectangle srcS = {0, 0, shootSprite.width, shootSprite.height};
         Rectangle destS = {b->rec.x, b->rec.y, b->rec.width, b->rec.height};

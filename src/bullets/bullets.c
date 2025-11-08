@@ -23,7 +23,6 @@ void InitShoot()
             6,
             24},
         .speed = {0, 1000},
-        .active = true,
         .color = RED};
 
     arrayPush(&bullets, &b);
@@ -36,8 +35,6 @@ void UpdateShoots()
     {
 
         Bullet *b = arrayAt(&bullets, i);
-        if (!b->active)
-            continue;
 
         b->rec.y -= b->speed.y * GetFrameTime();
 

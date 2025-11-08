@@ -65,7 +65,7 @@ void UpdateEnemy()
 
         e->rec.y += e->speed.y * GetFrameTime();
 
-        if (CheckCollisionRecs(e->rec, player.rec))
+        if (CheckCollisionRecs(e->rec, player.rec) && !gameOver)
         {
             SpawnParticles((Vector2){e->rec.x + e->rec.width / 2, e->rec.y + e->rec.height / 2}, enemyParticleConfig);
 

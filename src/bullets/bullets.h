@@ -13,7 +13,6 @@ typedef struct
 {
     Rectangle rec;
     Vector2 speed;
-    bool active;
     Color color;
 } Bullet;
 

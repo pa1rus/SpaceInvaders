@@ -4,22 +4,34 @@
 #include "music.h"
 #include "animations.h"
 
+#if defined(PLATFORM_WEB)
+    #include "emscripten/emscripten.h"
+#endif
+
 int main()
 {
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Space Invaders");
-    SetTargetFPS(60);
 
     InitMusic();
     LoadTextures();
 
     InitGame();
 
-    while (!WindowShouldClose())
-    {
+    #if defined(PLATFORM_WEB)
 
-        UpdateDrawFrame();
-    }
+        emscripten_set_main_loop(UpdateDrawFrame, 60, 1);
+        
+    #else
+
+        SetTargetFPS(60);
+
+        while (!WindowShouldClose()) 
+        {
+
+            UpdateDrawFrame();
+        }
+    #endif
 
     UnloadGame();
     CloseWindow();
