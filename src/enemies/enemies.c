@@ -67,11 +67,11 @@ void UpdateEnemy()
 
         if (CheckCollisionRecs(e->rec, player.rec))
         {
+            SpawnParticles((Vector2){e->rec.x + e->rec.width / 2, e->rec.y + e->rec.height / 2}, enemyParticleConfig);
 
             arraySwapRemove(&enemies, i);
             i--;
-
-            SpawnParticles((Vector2){e->rec.x + e->rec.width / 2, e->rec.y + e->rec.height / 2}, enemyParticleConfig);
+            
             Lose();
             break;
         }
