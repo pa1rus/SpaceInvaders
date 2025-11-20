@@ -28,7 +28,6 @@ web:
 	$(CC_WEB) $(CFLAGS_WEB) $(SRC) $(LIBS_WEB) \
 	--preload-file assets/audio@/assets/audio \
 	--preload-file assets/textures@/assets/textures \
-	--preload-file save \
 	--shell-file src/minshell.html \
 	-o $(OUT_WEB)
 
