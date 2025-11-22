@@ -20,4 +20,10 @@ extern const int SCREEN_WIDTH;
 extern const int SCREEN_HEIGHT;
 extern const int FPS;
 
+extern RenderTexture2D target;
+extern int offsetX;
+extern int offsetY;
+extern int scaledW;
+extern int scaledH;
+
 #endif

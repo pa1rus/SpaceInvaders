@@ -65,7 +65,8 @@ void UpdateGame()
 void DrawGame()
 {
 
-    BeginDrawing();
+    BeginTextureMode(target);
+
     ClearBackground(BLACK);
 
     DrawTextureEx(background0, (Vector2){0, scrolling0}, 0.0f, 1.0f, WHITE);
@@ -139,6 +140,18 @@ void DrawGame()
         DrawText("GAME OVER", SCREEN_WIDTH / 2 - MeasureText("GAME OVER", 60) / 2, SCREEN_HEIGHT / 2, 60, WHITE);
         DrawText("PRESS ENTER TO RESTART", SCREEN_WIDTH / 2 - MeasureText("PRESS ENTER TO RESTART", 20) / 2, SCREEN_HEIGHT / 2 + 80, 20, GRAY);
     }
+    EndTextureMode();
+
+    BeginDrawing();
+    ClearBackground(BLACK);
+
+    DrawTexturePro(
+        target.texture,
+        (Rectangle){0, 0, SCREEN_WIDTH, -SCREEN_HEIGHT},
+        (Rectangle){offsetX, offsetY, scaledW, scaledH},
+        (Vector2){0, 0},
+        0.0f,
+        WHITE);
 
     EndDrawing();
 }
